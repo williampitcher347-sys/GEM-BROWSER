@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full w-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GemBot Browser v0.1</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Firebase SDK (Compat Version for reliable global bindings) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #030712;
+            color: #f3f4f6;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            user-select: none;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Mouse Spotlight Effect */
+        #mouseLight {
+            position: fixed;
+            width: 550px;
+            height: 550px;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, rgba(112, 0, 255, 0.03) 45%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Glassmorphism Styling */
+        .glass-panel {
+            background: rgba(13, 17, 23, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        .modal-overlay {
+            background: rgba(3, 7, 18, 0.90);
+            backdrop-filter: blur(14px);
+            z-index: 50000;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #030712; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.5; filter: drop-shadow(0 0 15px rgba(0, 240, 255, 0.4)); }
+            50% { opacity: 0.9; filter: drop-shadow(0 0 35px rgba(112, 0, 255, 0.8)); }
+        }
+        .gembot-logo-glow { animation: pulseGlow 4s ease-in-out infinite; }
+
+        .gem-shape {
+            clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-full w-full overflow-hidden">
+
+    <div id="mouseLight"></div>
+
+    <!-- ================= MANIFEST / UPDATE LOG MODAL ================= -->
+    <div id="updateLogModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-xl rounded-3xl p-8 border border-cyan-500/30 relative animate-in fade-in duration-300">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center text-slate-950 shadow-lg shadow-cyan-500/20">
+                        <div class="w-5 h-5 bg-slate-950 gem-shape"></div>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-extrabold text-white tracking-wide">GEMBOT BROWSER v0.1</h2>
+                        <p class="text-xs text-cyan-400 mono">Realtime Cloud Edge & Proxy Architecture</p>
+                    </div>
+                </div>
+                <button onclick="closeUpdateLog()" class="p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 mb-8 text-sm text-slate-300 max-h-[50vh] overflow-y-auto pr-2">
+                <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-start gap-3">
+                    <i data-lucide="globe" class="w-5 h-5 text-cyan-400 shrink-0 mt-0.5"></i>
+                    <div>
+                        <h4 class="font-semibold text-white mb-1">GemBot Home (Web Edge Engine)</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">High-performance gateway with Cloudflare proxy endpoints, Base64 obfuscation support, safety enclave protection, and smart fallback routing.</p>
+                    </div>
+                </div>
+                <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-start gap-3">
+                    <i data-lucide="cpu" class="w-5 h-5 text-purple-400 shrink-0 mt-0.5"></i>
+                    <div>
+                        <h4 class="font-semibold text-white mb-1">GemBot Create & Store</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">Sandbox workspace hosting local HTML apps, creator hub, and live community proxy store powered by Firebase Realtime Database.</p>
+                    </div>
+                </div>
+                <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-start gap-3">
+                    <i data-lucide="message-square" class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5"></i>
+                    <div>
+                        <h4 class="font-semibold text-white mb-1">Global Mesh Chat</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">Connect and chat in real-time across the global node network with persistent mesh room channels.</p>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closeUpdateLog()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-purple-600 hover:brightness-110 text-slate-950 font-bold shadow-lg shadow-cyan-500/25 transition flex items-center justify-center gap-2">
+                <span>Launch GemBot Core</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= SETTINGS MODAL ================= -->
+    <div id="settingsModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-lg rounded-3xl p-6 border border-slate-800 relative">
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="settings" class="w-6 h-6 text-cyan-400"></i>
+                    <h3 class="text-lg font-bold text-white">GemBot Preferences</h3>
+                </div>
+                <button onclick="closeSettingsModal()" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="space-y-4 text-xs">
+                <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800">
+                    <div>
+                        <h4 class="font-semibold text-white">Cyberpunk Spotlight Effect</h4>
+                        <p class="text-slate-400 text-[11px]">Toggle ambient cursor light cone.</p>
+                    </div>
+                    <button id="toggleMouseLightBtn" onclick="toggleMouseLightSetting()" class="px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-semibold">Enabled</button>
+                </div>
+                <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800">
+                    <div>
+                        <h4 class="font-semibold text-white">Local History Logging</h4>
+                        <p class="text-slate-400 text-[11px]">Save visited links and searches locally.</p>
+                    </div>
+                    <button id="toggleHistorySettingBtn" onclick="toggleHistoryTrackingSetting()" class="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold">Enabled</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SEARCH HISTORY MODAL ================= -->
+    <div id="historyModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-2xl rounded-3xl p-6 border border-slate-800 relative flex flex-col max-h-[80vh]">
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="history" class="w-6 h-6 text-cyan-400"></i>
+                    <h3 class="text-lg font-bold text-white">Navigation History</h3>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="clearHistory()" class="px-3 py-1.5 rounded-xl bg-red-500/20 text-xs font-semibold text-red-400 border border-red-500/30 hover:bg-red-500/30 transition">Clear All</button>
+                    <button onclick="closeHistoryModal()" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+            <div id="historyList" class="flex-1 overflow-y-auto space-y-2 pr-2 text-xs"></div>
+        </div>
+    </div>
+
+    <!-- ================= PROXY & APP DEPLOY MODAL ================= -->
+    <div id="uploadModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-xl rounded-3xl p-6 border border-purple-500/30">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="upload-cloud" class="w-5 h-5 text-purple-400"></i>
+                    <span>Publish Proxy, App or Plugin</span>
+                </h3>
+                <button onclick="closeUploadModal()" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            
+            <div class="space-y-3 mb-4 text-xs">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-400 mb-1">Title / Name</label>
+                        <input type="text" id="pubName" placeholder="e.g. QuickMenu Overlay" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-400 mb-1">Type</label>
+                        <select id="pubType" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500">
+                            <option value="proxy">Cloudflare Proxy Worker</option>
+                            <option value="app">Custom HTML App</option>
+                            <option value="plugin">Browser Plugin / Overlay</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-medium text-slate-400 mb-1">Worker URL Endpoint (If Proxy)</label>
+                    <input type="text" id="pubUrl" placeholder="https://myworker.subdomain.workers.dev" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-cyan-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-400 mb-1">Creator Name</label>
+                        <input type="text" id="pubAuthor" placeholder="e.g. Alex" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-400 mb-1">Creator Email</label>
+                        <input type="text" id="pubEmail" placeholder="yourname@gmail.com" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-cyan-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-medium text-slate-400 mb-1">Raw HTML Code / Plugin Script</label>
+                    <textarea id="uploadSiteCode" rows="3" placeholder="<!DOCTYPE html>... or plugin UI script" class="w-full mono bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-200 focus:outline-none focus:border-cyan-500"></textarea>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeUploadModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancel</button>
+                <button onclick="deployProxyOrApp()" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-purple-600 hover:brightness-110 text-slate-950 font-bold text-xs shadow-lg shadow-cyan-500/20">Publish to Store</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MAIN APP LAYOUT ================= -->
+    <div id="mainApp" class="flex-1 flex flex-col h-full w-full overflow-hidden">
+
+        <!-- Navigation Header -->
+        <header class="glass-panel border-b border-slate-800/80 px-4 py-2.5 flex items-center gap-3 shrink-0 z-30">
+            <div class="flex items-center gap-2.5 pr-2 border-r border-slate-800">
+                <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center text-slate-950 shadow-md shadow-cyan-500/30">
+                    <div class="w-3.5 h-3.5 bg-slate-950 gem-shape"></div>
+                </div>
+                <span class="font-extrabold text-sm tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-400">GEMBOT</span>
+            </div>
+
+            <div class="flex items-center gap-1">
+                <button onclick="goBack()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 transition" title="Back"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                <button onclick="goForward()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 transition" title="Forward"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                <button onclick="reloadTab()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 transition" title="Reload"><i data-lucide="rotate-cw" class="w-4 h-4"></i></button>
+                <button onclick="goHome()" class="p-2 rounded-xl text-slate-400 hover:text-cyan-400 hover:bg-slate-800/50 transition" title="Go Home"><i data-lucide="home" class="w-4 h-4"></i></button>
+            </div>
+
+            <div id="tabList" class="flex items-center gap-2 overflow-x-auto max-w-md py-1"></div>
+            <button onclick="createNewTab('gembot://GemBotHome.net')" class="p-2 rounded-xl text-slate-400 hover:text-cyan-400 hover:bg-slate-800/50 transition"><i data-lucide="plus" class="w-4 h-4"></i></button>
+
+            <div class="ml-auto flex items-center bg-slate-900/80 p-1 rounded-2xl border border-slate-800">
+                <button id="btnHome" onclick="switchBrowserEngine('home')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-cyan-400 bg-cyan-500/20 border border-cyan-500/30 flex items-center gap-2 transition">
+                    <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                    <span>GemBot Home (Proxy Web)</span>
+                </button>
+                <button id="btnCreate" onclick="switchBrowserEngine('create')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white flex items-center gap-2 transition">
+                    <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+                    <span>GemBot Create & Store</span>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2 pl-2 border-l border-slate-800">
+                <button onclick="toggleFullscreen()" class="p-2.5 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Toggle Viewport Fullscreen"><i data-lucide="maximize-2" class="w-4 h-4"></i></button>
+                <button onclick="openHistoryModal()" class="p-2.5 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white transition" title="History"><i data-lucide="history" class="w-4 h-4"></i></button>
+                <button onclick="openSettingsModal()" class="p-2.5 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Settings"><i data-lucide="settings" class="w-4 h-4"></i></button>
+                <button onclick="toggleChatDrawer()" class="p-2.5 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-cyan-400 relative transition" title="Global Mesh Chat"><i data-lucide="message-square" class="w-4 h-4"></i></button>
+                <button onclick="openUpdateLog()" class="p-2.5 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Manifest"><i data-lucide="info" class="w-4 h-4"></i></button>
+            </div>
+        </header>
+
+        <!-- Address Bar & Tools -->
+        <div class="glass-panel border-b border-slate-800/60 px-4 py-2 flex flex-col gap-2 shrink-0 z-20">
+            <div class="flex items-center gap-3 relative">
+                
+                <select id="activeProxyDropdown" class="bg-slate-900 border border-slate-800 text-cyan-400 text-xs px-3 py-1.5 rounded-xl focus:outline-none focus:border-cyan-500/50 max-w-[200px] truncate">
+                    <option value="https://gembot1.williampitcher347.workers.dev" selected>Gembot Primary Node</option>
+                </select>
+
+                <div id="safetyBadge" class="flex items-center gap-2 text-cyan-400 bg-cyan-500/10 px-3 py-1.5 rounded-xl border border-cyan-500/20 text-xs mono shrink-0">
+                    <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+                    <span id="safetyBadgeText">Safety Key V0.1</span>
+                </div>
+
+                <div class="flex-1 relative flex items-center">
+                    <span class="absolute left-4 text-slate-500"><i data-lucide="search" class="w-4 h-4"></i></span>
+                    <input type="text" id="urlInput" oninput="handleUrlInput(event)" onkeydown="handleUrlKeydown(event)" placeholder="Search the web or enter URL..." 
+                           class="w-full bg-slate-900/90 border border-slate-800 focus:border-cyan-500/50 rounded-2xl py-2 pl-11 pr-24 text-sm text-slate-200 focus:outline-none transition">
+                    <button onclick="navigateToUrl()" class="absolute right-2 px-4 py-1 rounded-xl bg-gradient-to-r from-cyan-400 to-sky-500 hover:brightness-110 text-slate-950 font-bold text-xs transition">Go</button>
+                </div>
+
+                <div id="searchSuggestions" class="absolute top-12 left-80 right-20 glass-panel rounded-2xl border border-slate-800 hidden z-50 overflow-hidden shadow-2xl max-h-60 overflow-y-auto"></div>
+            </div>
+
+            <div id="bookmarkletBar" class="flex items-center gap-2 pt-1 border-t border-slate-800/40 text-xs">
+                <span class="text-slate-500 text-[10px] uppercase tracking-wider mono">Tools:</span>
+                <button onclick="runBookmarklet('javascript:alert(document.title)')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 flex items-center gap-1.5 transition">
+                    <i data-lucide="terminal" class="w-3 h-3 text-cyan-400"></i>
+                    <span>Get Title</span>
+                </button>
+                <button onclick="runBookmarklet('javascript:document.body.style.filter=\'invert(1)\'')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 flex items-center gap-1.5 transition">
+                    <i data-lucide="moon" class="w-3 h-3 text-purple-400"></i>
+                    <span>Invert Color</span>
+                </button>
+                <button onclick="addCustomBookmarklet()" class="px-2.5 py-1 rounded-lg bg-slate-900/40 hover:bg-slate-800 text-slate-500 hover:text-slate-300 border border-dashed border-slate-800 transition">+ Add script</button>
+            </div>
+        </div>
+
+        <!-- Viewport Container -->
+        <div id="viewportOuterContainer" class="flex-1 relative w-full h-full overflow-hidden bg-[#030712]">
+            
+            <!-- Active Plugins / Overlays Container -->
+            <div id="activePluginsOverlay" class="absolute inset-0 pointer-events-none z-30 flex flex-col justify-end p-4 gap-2"></div>
+
+            <div id="viewportContainer" class="absolute inset-0 w-full h-full overflow-hidden">
+                <div id="pageGemBotHome" class="absolute inset-0 w-full h-full bg-gradient-to-b from-[#030712] via-[#090d1a] to-[#030712] flex flex-col items-center justify-center p-6 overflow-y-auto z-10">
+                    <div class="max-w-4xl w-full text-center my-auto py-8">
+                        
+                        <div class="w-20 h-20 rounded-3xl glass-panel mx-auto flex items-center justify-center mb-6 border border-cyan-500/30 gembot-logo-glow">
+                            <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-purple-600 gem-shape"></div>
+                        </div>
+                        <h1 class="text-4xl font-extrabold text-white tracking-wide mb-2">GemBot Core</h1>
+                        <p class="text-sm text-slate-400 mb-8 max-w-lg mx-auto">High-speed Edge Proxy Gateway & Realtime Cloud Application Engine.</p>
+                        
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                            <button onclick="navigateToUrl('https://wikipedia.org')" class="p-5 rounded-2xl glass-panel hover:border-cyan-500/50 flex flex-col items-center gap-3 transition group">
+                                <div class="p-3 rounded-xl bg-slate-800 text-cyan-400 group-hover:scale-110 transition"><i data-lucide="book-open" class="w-6 h-6"></i></div>
+                                <span class="text-xs font-semibold text-slate-200">Wikipedia</span>
+                            </button>
+                            <button onclick="navigateToUrl('https://duckduckgo.com')" class="p-5 rounded-2xl glass-panel hover:border-cyan-500/50 flex flex-col items-center gap-3 transition group">
+                                <div class="p-3 rounded-xl bg-slate-800 text-cyan-400 group-hover:scale-110 transition"><i data-lucide="search" class="w-6 h-6"></i></div>
+                                <span class="text-xs font-semibold text-slate-200">DuckDuckGo</span>
+                            </button>
+                            <button onclick="navigateToUrl('https://github.com')" class="p-5 rounded-2xl glass-panel hover:border-cyan-500/50 flex flex-col items-center gap-3 transition group">
+                                <div class="p-3 rounded-xl bg-slate-800 text-cyan-400 group-hover:scale-110 transition"><i data-lucide="code" class="w-6 h-6"></i></div>
+                                <span class="text-xs font-semibold text-slate-200">GitHub</span>
+                            </button>
+                            <button onclick="switchBrowserEngine('create')" class="p-5 rounded-2xl glass-panel hover:border-purple-500/50 flex flex-col items-center gap-3 transition group">
+                                <div class="p-3 rounded-xl bg-purple-500/10 text-purple-400 group-hover:scale-110 transition"><i data-lucide="cpu" class="w-6 h-6"></i></div>
+                                <span class="text-xs font-semibold text-purple-300">Proxy Store</span>
+                            </button>
+                        </div>
+
+                        <div class="glass-panel p-4 rounded-2xl border border-slate-800/80 inline-flex items-center gap-6 text-xs text-slate-400">
+                            <span class="flex items-center gap-2"><i data-lucide="wifi" class="w-4 h-4 text-emerald-400"></i> Realtime Sync: Online</span>
+                            <span class="flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4 text-cyan-400"></i> Enclave Defense: Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: GemBot Create & Proxy Store -->
+            <div id="pageGemBotCreate" class="absolute inset-0 w-full h-full bg-[#030712] hidden flex-col p-6 overflow-y-auto z-20">
+                <div class="max-w-6xl mx-auto w-full flex-1 flex flex-col">
+                    
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800 shrink-0">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                                <i data-lucide="cpu" class="w-7 h-7 text-purple-400"></i>
+                                <span>GemBot Realtime Proxy Store & Lounge</span>
+                            </h2>
+                            <p class="text-xs text-slate-400 mt-1">Discover, search, and publish Cloudflare Worker proxy endpoints and custom apps.</p>
+                        </div>
+                        <button onclick="openUploadModal()" class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-400 to-purple-600 hover:brightness-110 text-slate-950 font-bold text-xs flex items-center gap-2 transition shadow-lg shadow-cyan-500/20">
+                            <i data-lucide="upload" class="w-4 h-4"></i>
+                            <span>Publish Proxy / App</span>
+                        </button>
+                    </div>
+
+                    <div class="mb-6 flex gap-4 items-center shrink-0">
+                        <div class="relative flex-1">
+                            <span class="absolute left-4 top-3 text-slate-500"><i data-lucide="search" class="w-4 h-4"></i></span>
+                            <input type="text" id="storeSearchInput" oninput="renderProxyStore()" placeholder="Search proxies by name, worker URL, or creator..." 
+                                   class="w-full bg-slate-900/90 border border-slate-800 focus:border-purple-500/50 rounded-2xl py-2.5 pl-11 pr-4 text-sm text-slate-200 focus:outline-none transition">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+                        <!-- Proxy List Store -->
+                        <div class="lg:col-span-2 overflow-y-auto pr-1">
+                            <h3 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                                <i data-lucide="server" class="w-4 h-4 text-cyan-400"></i>
+                                <span>Community Proxies & Applications</span>
+                            </h3>
+                            <div id="proxyStoreGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                        </div>
+
+                        <!-- Realtime Creator Chat -->
+                        <div class="glass-panel p-4 rounded-3xl border border-slate-800 flex flex-col h-[500px] shrink-0">
+                            <div class="flex items-center gap-2 pb-3 mb-3 border-b border-slate-800">
+                                <i data-lucide="code-2" class="w-4 h-4 text-purple-400"></i>
+                                <h4 class="font-bold text-xs text-white">Dev & Creator Lounge</h4>
+                            </div>
+                            <div id="creatorChatMessages" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1"></div>
+                            <div class="mt-3 flex flex-col gap-2">
+                                <input type="text" id="creatorSenderInput" placeholder="Your Name" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500">
+                                <div class="flex gap-2">
+                                    <input type="text" id="creatorChatInput" onkeydown="if(event.key==='Enter')sendCreatorMessage()" placeholder="Dev message..." class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+                                    <button onclick="sendCreatorMessage()" class="p-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white transition"><i data-lucide="send" class="w-3.5 h-3.5"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Mesh Chat Drawer -->
+            <div id="chatDrawer" class="w-80 glass-panel border-l border-slate-800 flex flex-col transition-all duration-300 translate-x-full absolute right-0 top-0 bottom-0 z-40">
+                <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                    <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                        <i data-lucide="message-square" class="w-4 h-4 text-cyan-400"></i>
+                        <span>Global Mesh Chat</span>
+                    </h3>
+                    <button onclick="toggleChatDrawer()" class="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs"></div>
+                <div class="p-3 border-t border-slate-800 bg-slate-900/40 flex flex-col gap-2">
+                    <input type="text" id="chatSenderInput" placeholder="Your Name" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500">
+                    <div class="flex gap-2">
+                        <input type="text" id="chatInput" onkeydown="if(event.key==='Enter')sendChatMessage()" placeholder="Global message..." class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+                        <button onclick="sendChatMessage()" class="p-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold transition"><i data-lucide="send" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Firebase Configuration & Realtime Handlers -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgWM23Js4XQL1VrvWgK_tgOniDhxYnpno",
+            authDomain: "gembot-988a9.firebaseapp.com",
+            databaseURL: "https://gembot-988a9-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "gembot-988a9",
+            storageBucket: "gembot-988a9.firebasestorage.app",
+            messagingSenderId: "592028470491",
+            appId: "1:592028470491:web:f3deb805f9adedb93010fe"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        window.cloudProxies = [];
+
+        // Global Chat Realtime Binding (ref: 'chat')
+        db.ref('chat').on('value', (snapshot) => {
+            const data = snapshot.val();
+            const container = document.getElementById('chatMessages');
+            if (!container) return;
+            container.innerHTML = '';
+            if (!data) {
+                container.innerHTML = '<div class="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-400 text-center text-xs">No global messages yet.</div>';
+                return;
+            }
+            Object.values(data).forEach(msg => {
+                const el = document.createElement('div');
+                el.className = 'p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs text-slate-200';
+                el.innerHTML = `<span class="text-cyan-400 font-semibold mono">${escapeHtml(msg.sender || 'Anonymous')}:</span> ${escapeHtml(msg.text)}`;
+                container.appendChild(el);
+            });
+            container.scrollTop = container.scrollHeight;
+        });
+
+        // Creator Lounge Realtime Binding (ref: 'creator_chat')
+        db.ref('creator_chat').on('value', (snapshot) => {
+            const data = snapshot.val();
+            const container = document.getElementById('creatorChatMessages');
+            if (!container) return;
+            container.innerHTML = '';
+            if (!data) {
+                container.innerHTML = '<div class="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-400 text-center text-xs">Creator Lounge initialized.</div>';
+                return;
+            }
+            Object.values(data).forEach(msg => {
+                const el = document.createElement('div');
+                el.className = 'p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs text-slate-200';
+                el.innerHTML = `<span class="text-purple-400 font-semibold mono">${escapeHtml(msg.sender || 'Dev')}:</span> ${escapeHtml(msg.text)}`;
+                container.appendChild(el);
+            });
+            container.scrollTop = container.scrollHeight;
+        });
+
+        // Proxies Realtime Binding (ref: 'proxies')
+        db.ref('proxies').on('value', (snapshot) => {
+            const data = snapshot.val();
+            window.cloudProxies = data ? Object.values(data) : [];
+            if (window.renderProxyStore) window.renderProxyStore();
+            if (window.populateProxyDropdown) window.populateProxyDropdown();
+        });
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const senderInput = document.getElementById('chatSenderInput');
+            const text = input.value.trim();
+            const sender = senderInput.value.trim() || 'Anonymous Gem';
+            if (!text) return;
+
+            db.ref('chat').push({
+                sender,
+                text,
+                timestamp: Date.now()
+            });
+            input.value = '';
+        }
+
+        function sendCreatorMessage() {
+            const input = document.getElementById('creatorChatInput');
+            const senderInput = document.getElementById('creatorSenderInput');
+            const text = input.value.trim();
+            const sender = senderInput.value.trim() || 'Dev Gem';
+            if (!text) return;
+
+            db.ref('creator_chat').push({
+                sender,
+                text,
+                timestamp: Date.now()
+            });
+            input.value = '';
+        }
+
+        function deployProxyOrApp() {
+            const name = document.getElementById('pubName').value.trim();
+            const type = document.getElementById('pubType').value;
+            let url = document.getElementById('pubUrl').value.trim();
+            const author = document.getElementById('pubAuthor').value.trim();
+            const email = document.getElementById('pubEmail').value.trim();
+            const code = document.getElementById('uploadSiteCode').value.trim();
+
+            if (!name || (!url && !code) || !author || !email) {
+                alert('Please fill out Name, URL/Code, Author, and Email.');
+                return;
+            }
+
+            if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+
+            db.ref('proxies').push({
+                name,
+                type,
+                url: url || '',
+                author,
+                email,
+                code: code || '',
+                timestamp: Date.now()
+            });
+
+            closeUploadModal();
+            document.getElementById('pubName').value = '';
+            document.getElementById('pubUrl').value = '';
+            document.getElementById('pubAuthor').value = '';
+            document.getElementById('pubEmail').value = '';
+            document.getElementById('uploadSiteCode').value = '';
+        }
+    </script>
+
+    <!-- UI Interaction Scripts -->
+    <script>
+        lucide.createIcons();
+
+        let currentMode = 'home';
+        window.installedPlugins = JSON.parse(localStorage.getItem('gembot_plugins') || '{}');
+
+        // Fullscreen Toggle for Viewport Container
+        function toggleFullscreen() {
+            const container = document.getElementById('viewportOuterContainer');
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(err => {
+                    console.warn(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        function goHome() {
+            const activeProxy = document.getElementById('activeProxyDropdown').value;
+            const activeTab = tabs.find(t => t.id === activeTabId);
+            
+            if (activeProxy && currentMode === 'home') {
+                // Navigate directly to the root of the active Cloudflare Worker
+                let rootWorkerUrl = activeProxy;
+                if (!rootWorkerUrl.endsWith('/')) {
+                    rootWorkerUrl += '/';
+                }
+                
+                if (activeTab) {
+                    activeTab.url = rootWorkerUrl;
+                    activeTab.title = 'Proxy Home';
+                }
+                switchTab(activeTabId);
+                const vp = document.getElementById('viewport_' + activeTabId);
+                if (vp) {
+                    vp.src = rootWorkerUrl;
+                }
+            } else {
+                switchBrowserEngine('home');
+                if (activeTab) {
+                    activeTab.url = 'gembot://GemBotHome.net';
+                    activeTab.title = 'GemBot Core';
+                }
+                switchTab(activeTabId);
+            }
+        }
+
+        // Mouse Spotlight
+        let mouseLightEnabled = true;
+        const mouseLight = document.getElementById('mouseLight');
+        window.addEventListener('mousemove', (e) => {
+            if (!mouseLightEnabled) return;
+            mouseLight.style.left = e.clientX + 'px';
+            mouseLight.style.top = e.clientY + 'px';
+        });
+
+        function openSettingsModal() { document.getElementById('settingsModal').classList.remove('hidden'); }
+        function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
+        function toggleMouseLightSetting() {
+            mouseLightEnabled = !mouseLightEnabled;
+            mouseLight.style.opacity = mouseLightEnabled ? '1' : '0';
+            const btn = document.getElementById('toggleMouseLightBtn');
+            btn.textContent = mouseLightEnabled ? 'Enabled' : 'Disabled';
+            btn.className = `px-4 py-2 rounded-xl border font-semibold ${mouseLightEnabled ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'}`;
+        }
+
+        let historyTracking = true;
+        let searchHistory = JSON.parse(localStorage.getItem('gembot_history') || '[]');
+        function openHistoryModal() { renderHistory(); document.getElementById('historyModal').classList.remove('hidden'); }
+        function closeHistoryModal() { document.getElementById('historyModal').classList.add('hidden'); }
+        function toggleHistoryTrackingSetting() {
+            historyTracking = !historyTracking;
+            const btn = document.getElementById('toggleHistorySettingBtn');
+            btn.textContent = historyTracking ? 'Enabled' : 'Disabled';
+            btn.className = `px-4 py-2 rounded-xl border font-semibold ${historyTracking ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'}`;
+        }
+        function recordHistory(url) {
+            if (!historyTracking) return;
+            searchHistory.unshift({ url, timestamp: new Date().toLocaleTimeString() });
+            localStorage.setItem('gembot_history', JSON.stringify(searchHistory));
+        }
+        function clearHistory() {
+            searchHistory = [];
+            localStorage.removeItem('gembot_history');
+            renderHistory();
+        }
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = searchHistory.length === 0 ? '<div class="text-center py-8 text-slate-500">No history recorded.</div>' : '';
+            searchHistory.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center';
+                el.innerHTML = `<span class="text-cyan-400 font-mono truncate max-w-md">${escapeHtml(item.url)}</span><span class="text-slate-500 text-[10px]">${item.timestamp}</span>`;
+                list.appendChild(el);
+            });
+        }
+
+        function runBookmarklet(code) {
+            const activeVp = document.getElementById('viewport_' + activeTabId);
+            if (activeVp && activeVp.contentWindow) {
+                try { activeVp.contentWindow.location.href = code; } catch(e) { alert('Action restricted on frame.'); }
+            }
+        }
+        function addCustomBookmarklet() {
+            const code = prompt('Enter Bookmarklet JavaScript:');
+            if (code) runBookmarklet(code);
+        }
+
+        function switchBrowserEngine(mode) {
+            currentMode = mode;
+            const btnHome = document.getElementById('btnHome');
+            const btnCreate = document.getElementById('btnCreate');
+            const safetyBadge = document.getElementById('safetyBadgeText');
+            const urlInput = document.getElementById('urlInput');
+            const createPage = document.getElementById('pageGemBotCreate');
+            const homePage = document.getElementById('pageGemBotHome');
+
+            if (mode === 'home') {
+                btnHome.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold text-cyan-400 bg-cyan-500/20 border border-cyan-500/30 flex items-center gap-2 transition";
+                btnCreate.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white flex items-center gap-2 transition";
+                safetyBadge.textContent = "Safety Key V0.1";
+                urlInput.placeholder = "Search the web or enter URL...";
+                createPage.classList.add('hidden');
+                
+                const activeTab = tabs.find(t => t.id === activeTabId);
+                if (!activeTab || activeTab.url === 'gembot://GemBotHome.net' || activeTab.url === 'gembot://GemBotCreate.net') {
+                    homePage.classList.remove('hidden');
+                } else {
+                    const vp = document.getElementById('viewport_' + activeTabId);
+                    if (vp) vp.classList.remove('hidden');
+                }
+            } else {
+                btnCreate.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold text-purple-400 bg-purple-500/20 border border-purple-500/30 flex items-center gap-2 transition";
+                btnHome.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white flex items-center gap-2 transition";
+                safetyBadge.textContent = "Store & Sandbox";
+                urlInput.placeholder = "Search private apps or shared workers...";
+                homePage.classList.add('hidden');
+                
+                tabs.forEach(t => {
+                    const vp = document.getElementById('viewport_' + t.id);
+                    if (vp) vp.classList.add('hidden');
+                });
+                createPage.classList.remove('hidden');
+            }
+        }
+
+        function renderCustomErrorPage(viewport, errorReason, targetUrl) {
+            viewport.srcdoc = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>GemBot Security Enclave Error</title>
+                    <script src="https://cdn.tailwindcss.com"><\/script>
+                </head>
+                <body class="bg-[#030712] text-slate-100 h-screen flex flex-col items-center justify-center p-6 font-sans">
+                    <div class="glass-panel p-8 rounded-3xl border border-red-500/30 max-w-lg w-full text-center shadow-2xl bg-slate-900/90 backdrop-blur-xl">
+                        <div class="w-16 h-16 rounded-2xl bg-red-500/10 text-red-400 flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        </div>
+                        <h2 class="text-xl font-bold text-white mb-2">GemBot Safety Key Isolation</h2>
+                        <p class="text-xs text-slate-400 mb-6 leading-relaxed">The target domain <code class="text-cyan-400">${targetUrl}</code> was restricted due to frame security constraints (${errorReason}). Select an active proxy gateway to route traffic.</p>
+                        <div class="flex gap-3 justify-center">
+                            <button onclick="window.location.reload()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">Retry Connection</button>
+                            <button onclick="window.location.href='https://html.duckduckgo.com/html/?q=${encodeURIComponent(targetUrl)}'" class="px-5 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-xs font-bold transition">Search DuckDuckGo</button>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+        }
+
+        function handleUrlInput(e) {
+            const q = e.target.value.trim().toLowerCase();
+            const box = document.getElementById('searchSuggestions');
+            if (!q || q.startsWith('gembot://')) {
+                box.classList.add('hidden');
+                return;
+            }
+            
+            box.innerHTML = '';
+            const searchItem = document.createElement('div');
+            searchItem.className = 'p-2.5 hover:bg-slate-800/80 cursor-pointer text-xs text-slate-300 transition flex items-center gap-2';
+            searchItem.innerHTML = `<i data-lucide="search" class="w-3.5 h-3.5 text-cyan-400"></i><span>Search web for "${escapeHtml(q)}"</span>`;
+            searchItem.onclick = () => { navigateToUrl('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q)); box.classList.add('hidden'); };
+            box.appendChild(searchItem);
+            box.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        let tabs = [];
+        let activeTabId = null;
+        let tabCounter = 1;
+
+        function createNewTab(url = 'gembot://GemBotHome.net') {
+            const id = 'tab_' + tabCounter++;
+            tabs.push({ id, title: 'GemBot Core', url });
+            activeTabId = id;
+
+            const iframe = document.createElement('iframe');
+            iframe.id = 'viewport_' + id;
+            iframe.className = 'absolute inset-0 w-full h-full border-0 hidden bg-white z-0';
+            iframe.sandbox = "allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-pointer-lock";
+            iframe.onerror = () => renderCustomErrorPage(iframe, 'Frame unreachable', iframe.src);
+
+            // Dynamic URL tracker for Proxy Navigation
+            iframe.addEventListener('load', () => {
+                try {
+                    const frameUrl = iframe.contentWindow.location.href;
+                    if (frameUrl && frameUrl !== 'about:blank') {
+                        const active = tabs.find(t => t.id === id);
+                        if (active) {
+                            // Decode base64 proxy URL if navigating through Cloudflare Proxy Worker
+                            if (frameUrl.includes('/proxy/')) {
+                                const parts = frameUrl.split('/proxy/');
+                                if (parts[1]) {
+                                    try {
+                                        const decodedTarget = atob(parts[1]);
+                                        active.url = decodedTarget;
+                                        active.title = decodedTarget.replace(/^https?:\/\//, '');
+                                    } catch(e) {}
+                                }
+                            } else {
+                                active.url = frameUrl;
+                                active.title = frameUrl.replace(/^https?:\/\//, '');
+                            }
+                            if (activeTabId === id) {
+                                document.getElementById('urlInput').value = active.url;
+                            }
+                            renderTabs();
+                        }
+                    }
+                } catch(e) {
+                    // Cross-origin restriction fallback
+                }
+            });
+
+            document.getElementById('viewportContainer').appendChild(iframe);
+
+            switchTab(id);
+            navigateToUrl(url);
+        }
+
+        function renderTabs() {
+            const list = document.getElementById('tabList');
+            list.innerHTML = '';
+            tabs.forEach(t => {
+                const isActive = t.id === activeTabId;
+                const tabEl = document.createElement('div');
+                tabEl.className = `flex items-center gap-2 px-3 py-1.5 rounded-2xl cursor-pointer text-xs border transition ${isActive ? 'bg-slate-800/90 border-cyan-500/40 text-white' : 'bg-slate-900/40 border-slate-800/60 text-slate-400 hover:text-slate-200'}`;
+                tabEl.onclick = () => switchTab(t.id);
+                tabEl.innerHTML = `<span class="max-w-[100px] truncate">${escapeHtml(t.title)}</span><button onclick="event.stopPropagation();closeTab('${t.id}')" class="text-slate-500 hover:text-white"><i data-lucide="x" class="w-3 h-3"></i></button>`;
+                list.appendChild(tabEl);
+            });
+            lucide.createIcons();
+        }
+
+        function switchTab(id) {
+            activeTabId = id;
+            tabs.forEach(t => {
+                const vp = document.getElementById('viewport_' + t.id);
+                if (vp) vp.classList.add('hidden');
+            });
+            const active = tabs.find(t => t.id === id);
+            if (active) {
+                document.getElementById('urlInput').value = active.url;
+                const vp = document.getElementById('viewport_' + id);
+                if (active.url.startsWith('gembot://')) {
+                    if (vp) vp.classList.add('hidden');
+                    if (active.url === 'gembot://GemBotHome.net') switchBrowserEngine('home');
+                    else if (active.url === 'gembot://GemBotCreate.net') switchBrowserEngine('create');
+                } else {
+                    document.getElementById('pageGemBotHome').classList.add('hidden');
+                    document.getElementById('pageGemBotCreate').classList.add('hidden');
+                    if (vp) vp.classList.remove('hidden');
+                }
+            }
+            renderTabs();
+        }
+
+        function closeTab(id) {
+            if (tabs.length === 1) return;
+            tabs = tabs.filter(t => t.id !== id);
+            const vp = document.getElementById('viewport_' + id);
+            if (vp) vp.remove();
+            switchTab(tabs[0].id);
+        }
+
+        function handleUrlKeydown(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('searchSuggestions').classList.add('hidden');
+                navigateToUrl();
+            }
+        }
+
+        function navigateToUrl(customUrl = null) {
+            const input = customUrl || document.getElementById('urlInput').value.trim();
+            if (!input) return;
+
+            let targetUrl = input;
+            if (currentMode === 'home') {
+                if (!targetUrl.startsWith('gembot://') && !/^https?:\/\//i.test(targetUrl)) {
+                    if (targetUrl.includes('.') && !targetUrl.includes(' ')) {
+                        targetUrl = 'https://' + targetUrl;
+                    } else {
+                        targetUrl = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(targetUrl);
+                    }
+                }
+            }
+
+            const active = tabs.find(t => t.id === activeTabId);
+            if (active) {
+                active.url = targetUrl;
+                active.title = targetUrl.replace(/^https?:\/\//, '').replace('gembot://', '');
+            }
+
+            recordHistory(targetUrl);
+            switchTab(activeTabId);
+
+            if (!targetUrl.startsWith('gembot://')) {
+                const vp = document.getElementById('viewport_' + activeTabId);
+                const selectedProxy = document.getElementById('activeProxyDropdown').value;
+
+                if (selectedProxy) {
+                    const encodedUrl = btoa(targetUrl);
+                    vp.src = `${selectedProxy}/proxy/${encodedUrl}`;
+                } else {
+                    vp.src = targetUrl;
+                }
+            }
+        }
+
+        function goBack() {
+            const activeTab = tabs.find(t => t.id === activeTabId);
+            if (activeTab && !activeTab.url.startsWith('gembot://')) {
+                const vp = document.getElementById('viewport_' + activeTabId);
+                if (vp && vp.contentWindow) {
+                    try { vp.contentWindow.history.back(); } catch(e) {}
+                }
+            }
+        }
+        function goForward() {
+            const activeTab = tabs.find(t => t.id === activeTabId);
+            if (activeTab && !activeTab.url.startsWith('gembot://')) {
+                const vp = document.getElementById('viewport_' + activeTabId);
+                if (vp && vp.contentWindow) {
+                    try { vp.contentWindow.history.forward(); } catch(e) {}
+                }
+            }
+        }
+        function reloadTab() {
+            const vp = document.getElementById('viewport_' + activeTabId);
+            if (vp) vp.src = vp.src;
+        }
+
+        function openUpdateLog() { document.getElementById('updateLogModal').classList.remove('hidden'); }
+        function closeUpdateLog() { document.getElementById('updateLogModal').classList.add('hidden'); }
+
+        function toggleChatDrawer() { document.getElementById('chatDrawer').classList.toggle('translate-x-full'); }
+
+        function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
+        function closeUploadModal() { document.getElementById('uploadModal').classList.add('hidden'); }
+
+        window.renderProxyStore = function() {
+            const grid = document.getElementById('proxyStoreGrid');
+            if (!grid) return;
+            const q = (document.getElementById('storeSearchInput')?.value || '').toLowerCase();
+            grid.innerHTML = '';
+
+            const list = window.cloudProxies.filter(p => 
+                (p.name && p.name.toLowerCase().includes(q)) ||
+                (p.author && p.author.toLowerCase().includes(q)) ||
+                (p.url && p.url.toLowerCase().includes(q))
+            );
+
+            if (list.length === 0) {
+                grid.innerHTML = '<div class="col-span-2 text-center py-8 text-slate-500 text-xs">No matching proxies, apps or plugins found in store.</div>';
+                return;
+            }
+
+            list.forEach(item => {
+                const isPluginInstalled = window.installedPlugins[item.name];
+                const card = document.createElement('div');
+                card.className = "glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] ${item.type === 'app' ? 'text-purple-400' : item.type === 'plugin' ? 'text-emerald-400' : 'text-cyan-400'} mono uppercase font-bold">${escapeHtml(item.type || 'proxy')}</span>
+                            <span class="text-[10px] text-slate-500">by ${escapeHtml(item.author)} (${escapeHtml(item.email || 'N/A')})</span>
+                        </div>
+                        <h4 class="font-bold text-white text-sm mb-1">${escapeHtml(item.name)}</h4>
+                        ${item.url ? `<p class="text-[11px] text-slate-400 mono truncate mb-3">${escapeHtml(item.url)}</p>` : ''}
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                        ${item.url ? `<button onclick="useProxyEndpoint('${escapeHtml(item.url)}')" class="flex-1 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 font-semibold text-xs transition">Select Node</button>` : ''}
+                        ${item.code && item.type === 'app' ? `<button onclick="launchCustomApp('${escapeHtml(item.name)}', \`${encodeURIComponent(item.code)}\`)" class="flex-1 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition">Launch App</button>` : ''}
+                        ${item.code && item.type === 'plugin' ? `<button onclick="togglePlugin('${escapeHtml(item.name)}', \`${encodeURIComponent(item.code)}\`)" class="flex-1 py-1.5 rounded-xl ${isPluginInstalled ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'} font-semibold text-xs transition">${isPluginInstalled ? 'Disable Plugin' : 'Enable Plugin'}</button>` : ''}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            renderActivePlugins();
+        };
+
+        window.togglePlugin = function(name, encodedCode) {
+            const code = decodeURIComponent(encodedCode);
+            if (window.installedPlugins[name]) {
+                delete window.installedPlugins[name];
+            } else {
+                window.installedPlugins[name] = code;
+            }
+            localStorage.setItem('gembot_plugins', JSON.stringify(window.installedPlugins));
+            renderProxyStore();
+        };
+
+        function renderActivePlugins() {
+            const overlay = document.getElementById('activePluginsOverlay');
+            if (!overlay) return;
+            overlay.innerHTML = '';
+            Object.keys(window.installedPlugins).forEach(name => {
+                const code = window.installedPlugins[name];
+                const pluginEl = document.createElement('div');
+                pluginEl.className = 'pointer-events-auto self-start bg-slate-900/90 border border-emerald-500/40 p-3 rounded-2xl shadow-xl backdrop-blur-md max-w-xs text-xs text-slate-200';
+                pluginEl.innerHTML = `
+                    <div class="flex items-center justify-between mb-1 pb-1 border-b border-slate-800">
+                        <span class="font-bold text-emerald-400">${escapeHtml(name)}</span>
+                        <button onclick="togglePlugin('${escapeHtml(name)}', '')" class="text-slate-500 hover:text-red-400"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                    <div class="plugin-content">${code}</div>
+                `;
+                overlay.appendChild(pluginEl);
+            });
+            lucide.createIcons();
+        }
+
+        window.populateProxyDropdown = function() {
+            const dropdown = document.getElementById('activeProxyDropdown');
+            if (!dropdown) return;
+            const current = dropdown.value;
+            dropdown.innerHTML = `
+                <option value="https://gembot1.williampitcher347.workers.dev">Gembot Primary Node</option>
+            `;
+            window.cloudProxies.filter(p => p.url).forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.url;
+                opt.textContent = `${p.name} (${p.author})`;
+                dropdown.appendChild(opt);
+            });
+            dropdown.value = current;
+        };
+
+        function useProxyEndpoint(url) {
+            const dropdown = document.getElementById('activeProxyDropdown');
+            dropdown.value = url;
+            switchBrowserEngine('home');
+        }
+
+        function launchCustomApp(name, encodedCode) {
+            const code = decodeURIComponent(encodedCode);
+            switchBrowserEngine('create');
+            createNewTab('gembot://' + name);
+            const vp = document.getElementById('viewport_' + activeTabId);
+            vp.classList.remove('hidden');
+            document.getElementById('pageGemBotCreate').classList.add('hidden');
+            const doc = vp.contentDocument || vp.contentWindow.document;
+            doc.open();
+            doc.write(code);
+            doc.close();
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            openUpdateLog();
+            createNewTab('gembot://GemBotHome.net');
+            renderActivePlugins();
+        });
+    </script>
+</body>
+</html>
